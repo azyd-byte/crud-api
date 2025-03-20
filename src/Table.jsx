@@ -7,6 +7,8 @@ const Table = () => {
   const [avatar, setAvatar] = useState("");
   const [message, setMessage] = useState(""); // Notifikasi
   const [editId, setEditId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(5);
 
   //Fetch data dari API saat komponen pertama kali dimuat
   useEffect(() => {
@@ -84,7 +86,7 @@ const Table = () => {
       });
   };
 
-  //Fungsi Hapus Data
+  // Fungsi Hapus Data
   const handleDelete = (id) => {
     if (window.confirm("Apakah kamu yakin ingin menghapus data ini?")) {
       axios
@@ -92,50 +94,25 @@ const Table = () => {
           `https://67d2916190e0670699be1f4c.mockapi.io/sekolah/get-all/${id}`
         )
         .then(() => {
-          //ambil ulang data terbaru setelah penghapusan
-          return axios.get(
-            "https://67d2916190e0670699be1f4c.mockapi.io/sekolah/get-all"
-          );
-        })
-        .then((response) => {
-          // Sortir data berdasarkan ID lama
-          let updatedData = response.data.sort((a, b) => a.id - b.id);
-
-          //update ID agar tetap berurutab dari 1,2,3,...
-          const updatePromises = updatedData.map((item, index) => {
-            return axios.put(
-              `https://67d2916190e0670699be1f4c.mockapi.io/sekolah/get-all/${item.id}`,
-              {
-                id: index + 1, //set ID baru
-                name: item.name,
-                avatar: item.avatar,
-              }
-            );
-          });
-
-          //Tunggu semua update selesai
-          return Promise.all(updatePromises);
-        })
-        .then(() => {
-          // Ambil data terbaru setelah ID diperbarui
-          return axios.get(
-            "https://67d2916190e0670699be1f4c.mockapi.io/sekolah/get-all"
-          );
-        })
-        .then((response) => {
-          setData(response.data); // Update state dengan data terbaru
-          setMessage("✅ Data berhasil dihapus dan ID diperbarui!");
+          setData(data.filter((item) => item.id !== id)); // Hapus data dari state
+          setMessage("✅ Data berhasil dihapus!");
           setTimeout(() => setMessage(""), 3000);
         })
         .catch((error) => {
-          console.error("Error updating IDs:", error);
-          setMessage("❌ Gagal memperbarui ID setelah penghapusan!");
+          console.error("Error deleting data:", error);
+          setMessage("❌ Gagal menghapus data!");
         });
     }
   };
 
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = data.slice(indexOfFirstItem, indexOfLastItem);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
   return (
-    <div>
+    <div style={{ margin: "30px" }}>
       <h2>Data Sekolah</h2>
 
       {/* Notifikasi */}
@@ -172,20 +149,21 @@ const Table = () => {
       </form>
 
       {/* Tabel Data */}
-      <table border="1" width="100%">
+      <table border="1" width="80%" style={{ tableLayout: "fixed" }}>
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Nama</th>
-            <th>Avatar</th>
-            <th>Aksi</th>
+            <th style={{ width: "3%" }}>ID</th>
+            <th style={{ width: "15%" }}>Nama</th>
+            <th style={{ width: "30%" }}>Avatar</th>
+            <th style={{ width: "10%" }}>Aksi</th>
           </tr>
         </thead>
         <tbody>
-          {data.length > 0 ? (
-            data.map((item) => (
+          {currentItems.length > 0 ? (
+            currentItems.map((item, index) => (
               <tr key={item.id}>
-                <td>{item?.id}</td>
+                <td>{indexOfFirstItem + index + 1}</td>{" "}
+                {/* Tampilkan ID berdasarkan urutan array */}
                 <td>{item?.name}</td>
                 <td>{item?.avatar}</td>
                 <td>
@@ -205,11 +183,25 @@ const Table = () => {
             ))
           ) : (
             <tr>
-              <td colSpan="3">Loading data...</td>
+              <td colSpan="4">Loading data...</td>
             </tr>
           )}
         </tbody>
       </table>
+      <div>
+        {Array.from(
+          { length: Math.ceil(data.length / itemsPerPage) },
+          (_, i) => (
+            <button
+              key={i}
+              onClick={() => paginate(i + 1)}
+              style={{ margin: "5px" }}
+            >
+              {i + 1}
+            </button>
+          )
+        )}
+      </div>
     </div>
   );
 };
