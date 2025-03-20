@@ -9,6 +9,8 @@ const Table = () => {
   const [editId, setEditId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
+  const [searchTerm, setSearchTerm] = useState(""); // State untuk pencarian
+  const [filterName, setFilterName] = useState(""); // State untuk filter nama
 
   //Fetch data dari API saat komponen pertama kali dimuat
   useEffect(() => {
@@ -66,8 +68,8 @@ const Table = () => {
       .put(
         `https://67d2916190e0670699be1f4c.mockapi.io/sekolah/get-all/${editId}`,
         {
-          name: name,
-          avatar: avatar,
+          name,
+          avatar,
         }
       )
       .then((response) => {
@@ -87,8 +89,8 @@ const Table = () => {
   };
 
   // Fungsi Hapus Data
-  const handleDelete = (id) => {
-    if (window.confirm("Apakah kamu yakin ingin menghapus data ini?")) {
+  const handleDelete = (id, name) => {
+    if (window.confirm(`Apakah kamu yakin ingin menghapus ${name}?`)) {
       axios
         .delete(
           `https://67d2916190e0670699be1f4c.mockapi.io/sekolah/get-all/${id}`
@@ -105,9 +107,19 @@ const Table = () => {
     }
   };
 
+  //Filter pencarian
+  const filteredData = data.filter(
+    (item) =>
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      (filterName
+        ? item.name.toLowerCase().includes(filterName.toLowerCase())
+        : true)
+  );
+
+  //pagination
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = data.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
@@ -128,6 +140,24 @@ const Table = () => {
           {message}
         </div>
       )}
+
+      {/* Form Pencarian & Filter */}
+      <div>
+        <input
+          type="text"
+          placeholder="Cari nama"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{ marginBottom: "10px", padding: "5px" }}
+        />
+        {/* <input
+          type="text"
+          placeholder="Filter Nama"
+          value={filterName}
+          onChange={(e) => setFilterName(e.target.value)}
+          style={{ marginleft: "10px", padding: "5px" }}
+        /> */}
+      </div>
 
       {/* Form Tambah/Edit Data */}
       <form onSubmit={handleAdd}>
@@ -169,7 +199,7 @@ const Table = () => {
                 <td>
                   <button onClick={() => handleEdit(item)}>Edit</button>
                   <button
-                    onClick={() => handleDelete(item?.id)}
+                    onClick={() => handleDelete(item?.id, item?.name)}
                     style={{
                       marginLeft: "5px",
                       background: "red",
@@ -190,7 +220,7 @@ const Table = () => {
       </table>
       <div>
         {Array.from(
-          { length: Math.ceil(data.length / itemsPerPage) },
+          { length: Math.ceil(filteredData.length / itemsPerPage) },
           (_, i) => (
             <button
               key={i}
